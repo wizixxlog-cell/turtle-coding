@@ -1,0 +1,1101 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>거북이 카드 코딩</title>
+<meta name="description" content="4x4 격자판에서 앞으로·뒤로·왼쪽·오른쪽 카드로 거북이를 움직이는 카드 코딩 연습 게임">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect x='6' y='36' width='10' height='32' rx='5' fill='%23151C30'/%3E%3Crect x='84' y='36' width='10' height='32' rx='5' fill='%23151C30'/%3E%3Crect x='14' y='22' width='72' height='64' rx='22' fill='%2333456F'/%3E%3Cpath d='M50 32 L65 41 L65 59 L50 68 L35 59 L35 41 Z' fill='%236486C4'/%3E%3Cpath d='M50 4 L69 27 L31 27 Z' fill='%23FF8A3D'/%3E%3C/svg%3E">
+<style>:root{color-scheme:light} html,body{margin:0} img{max-width:100%} [hidden]{display:none!important}</style>
+</head>
+<body>
+<title>거북이 카드 코딩</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Gothic+A1:wght@400;500;700;900&display=swap">
+
+<style>
+:root{
+  --ground:#E7EBF4;
+  --ground-2:#DDE3F0;
+  --surface:#FFFFFF;
+  --surface-2:#F3F6FC;
+  --ink:#171F36;
+  --ink-2:#4A5578;
+  --ink-3:#7E88A6;
+  --line:#D5DCEC;
+  --line-2:#C3CCE2;
+
+  --accent:#4739C9;
+  --accent-2:#EBE9FF;
+
+  --c-go:#17A75B;      --c-go-d:#0E7B41;    --c-go-l:#E3F6EC;
+  --c-left:#F2B10E;    --c-left-d:#B57D00;  --c-left-l:#FDF3D9;
+  --c-right:#2277DE;   --c-right-d:#155CB0; --c-right-l:#E1EEFC;
+  --c-back:#E23D42;    --c-back-d:#B02226;  --c-back-l:#FCE6E7;
+
+  --goal:#7A2FD1;
+  --wp:#D6198A;
+  --nose:#FF8A3D;
+
+  --r-lg:20px; --r-md:14px; --r-sm:10px;
+  --shadow:0 1px 2px rgba(23,31,54,.06), 0 8px 24px -12px rgba(23,31,54,.28);
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--ground);
+  color:var(--ink);
+  font-family:"Gothic A1", system-ui, -apple-system, "Malgun Gothic", sans-serif;
+  -webkit-font-smoothing:antialiased;
+  overflow:hidden;
+}
+h1,h2,h3,.display{font-family:"Jua", "Gothic A1", system-ui, sans-serif; font-weight:400; margin:0; letter-spacing:.01em}
+button{font-family:inherit; cursor:pointer; border:none; background:none; color:inherit}
+:focus-visible{outline:3px solid var(--accent); outline-offset:2px; border-radius:6px}
+
+/* ================= layout ================= */
+.app{height:100vh; display:flex; flex-direction:column; min-height:0}
+
+.top{
+  display:flex; align-items:center; gap:18px;
+  padding:12px 22px 12px;
+  flex:0 0 auto;
+}
+.brand{display:flex; align-items:center; gap:11px; flex:0 0 auto}
+.brand .mark{width:40px;height:40px;flex:0 0 auto}
+.brand h1{font-size:23px; line-height:1.1}
+.brand p{margin:1px 0 0; font-size:12px; color:var(--ink-3); font-weight:500}
+
+.stages{display:flex; gap:8px; margin-left:auto; flex-wrap:wrap; justify-content:flex-end; align-items:center}
+.grp{
+  display:flex; align-items:center; gap:5px;
+  background:var(--surface); border:1.5px solid var(--line);
+  border-radius:999px; padding:5px 9px 5px 12px;
+}
+.grp.on{border-color:var(--accent); background:var(--accent-2)}
+.grp.done{border-color:#A9DFC2; background:#E4F6EC}
+.glabel{
+  font-family:"Jua",sans-serif; font-size:14px; color:var(--ink-2);
+  margin-right:3px; white-space:nowrap;
+}
+.grp.on .glabel{color:var(--accent)}
+.grp.done .glabel{color:var(--c-go-d)}
+.glabel small{font-size:10.5px; opacity:.7; margin-left:3px; font-family:"Gothic A1",sans-serif; font-weight:700}
+.mnum{
+  width:27px; height:27px; border-radius:9px; flex:0 0 auto;
+  display:grid; place-items:center; position:relative;
+  background:var(--surface-2); border:1.5px solid var(--line-2);
+  font-size:13px; font-weight:800; color:var(--ink-3);
+  font-variant-numeric:tabular-nums; transition:.2s;
+}
+.mnum svg{width:15px;height:15px}
+.mnum.done{background:var(--c-go); border-color:var(--c-go); color:#fff}
+.mnum.done.just{animation:checkpop .45s cubic-bezier(.3,1.5,.5,1)}
+@keyframes checkpop{0%{transform:scale(1)}45%{transform:scale(1.35)}100%{transform:scale(1)}}
+.mnum.cur{
+  background:var(--accent); border-color:var(--accent); color:#fff;
+  box-shadow:0 0 0 3.5px rgba(71,57,201,.2);
+}
+
+.ghost{
+  flex:0 0 auto;
+  border:1.5px solid var(--line); background:var(--surface);
+  border-radius:999px; padding:9px 16px; font-size:14px; font-weight:700; color:var(--ink-2);
+  transition:.15s;
+}
+.ghost:hover{border-color:var(--accent); color:var(--accent)}
+
+.main{
+  flex:1 1 auto; min-height:0;
+  display:grid; grid-template-columns:minmax(0,1fr) 392px; gap:20px;
+  padding:0 22px 18px;
+}
+
+/* ================= board ================= */
+.boardcol{display:flex; flex-direction:column; min-height:0; gap:10px}
+.boardhead{display:flex; align-items:center; gap:10px; flex:0 0 auto}
+.badge{
+  font-family:"Jua",sans-serif; font-size:17px;
+  background:var(--ink); color:#fff; padding:5px 15px; border-radius:999px;
+}
+.hint{
+  display:flex; align-items:baseline; gap:0;
+  font-family:"Jua",sans-serif; font-size:17px; color:var(--accent);
+  background:var(--accent-2); padding:4px 16px; border-radius:999px;
+}
+.hint b{
+  font-weight:400; font-size:28px; line-height:1; font-variant-numeric:tabular-nums;
+  margin:0 3px 0 8px;
+}
+.hint i{
+  font-style:normal; font-size:14px; color:var(--wp);
+  border-left:1.5px solid rgba(71,57,201,.25); padding-left:10px; margin-left:12px;
+}
+.legend{display:flex; gap:14px; align-items:center; flex-wrap:wrap; font-size:12.5px; color:var(--ink-2); font-weight:600}
+.legend span{display:flex; align-items:center; gap:6px}
+.lgchip{width:16px;height:16px;border-radius:5px; display:grid; place-items:center; color:#fff; font-size:10px; font-weight:900}
+
+.boardwrap{flex:1 1 auto; min-height:0; display:grid; place-items:center; position:relative}
+.board{
+  position:relative;
+  /* 가로·세로 중 짧은 쪽에 맞춘다. 칸이 항상 정사각형이어야 하므로
+     width 와 height 를 함께 고정하지 않고 한 변만 정한 뒤 aspect-ratio 로 맞춘다. */
+  width:min(100cqw, 100cqh);
+  height:auto;
+  aspect-ratio:1/1;
+  max-width:100%;
+  max-height:100%;
+  flex:0 0 auto;
+  background:linear-gradient(160deg,#CED7EA,#BFCADF);
+  border-radius:var(--r-lg);
+  padding:2.2%;
+  box-shadow:inset 0 2px 6px rgba(23,31,54,.18), 0 10px 30px -16px rgba(23,31,54,.5);
+}
+.boardwrap{container-type:size}
+.cells{position:absolute; inset:2.2%}
+.cell{position:absolute; width:25%; height:25%; padding:3.2%}
+.tile{
+  position:relative; width:100%; height:100%;
+  background:var(--surface); border-radius:12%;
+  box-shadow:0 1px 0 rgba(23,31,54,.10), inset 0 0 0 1.5px rgba(255,255,255,.9);
+  display:grid; place-items:center;
+}
+.tile::after{
+  content:""; position:absolute; inset:9%;
+  border:1.5px dashed #E1E7F3; border-radius:8%;
+}
+.tile.start{background:#EEF1F8}
+.tile.start::after{border-color:#CBD4E8}
+.tile.goal{background:linear-gradient(160deg,#F3EAFD,#EADCFB)}
+.tile.goal::after{border-color:#D6BDF3}
+.tile.wp{background:linear-gradient(160deg,#FDEAF5,#FBDDEE)}
+.tile.wp::after{border-color:#F5C0DE}
+
+.mark{position:relative; z-index:1; display:grid; place-items:center; gap:2px; text-align:center; line-height:1}
+.mark .ic{width:42%; max-width:44px; min-width:20px; aspect-ratio:1; display:grid; place-items:center}
+.mark .tx{font-family:"Jua",sans-serif; font-size:clamp(10px,1.55cqw,17px); color:var(--ink-2)}
+.tile.goal .tx{color:var(--goal)}
+.tile.wp .tx{color:var(--wp)}
+.wpnum{
+  width:clamp(22px,3.4cqw,42px); aspect-ratio:1; border-radius:50%;
+  background:var(--wp); color:#fff; display:grid; place-items:center;
+  font-family:"Jua",sans-serif; font-size:clamp(13px,2.1cqw,25px);
+  box-shadow:0 3px 0 #A61069;
+  transition:.25s;
+}
+.tile.wp.hit .wpnum{background:var(--c-go); box-shadow:0 3px 0 var(--c-go-d); transform:scale(1.08)}
+.tile.wp.hit .tx{color:var(--c-go-d)}
+.startflag{
+  position:absolute; bottom:4%; left:4%;
+  font-family:"Jua",sans-serif; font-size:clamp(9px,1.35cqw,15px);
+  color:var(--ink-2); z-index:2; white-space:nowrap;
+  background:rgba(255,255,255,.92); padding:1px 7px; border-radius:99px;
+  box-shadow:0 1px 3px rgba(23,31,54,.15);
+}
+
+.trail{position:absolute; inset:2.2%; pointer-events:none; overflow:visible; z-index:2}
+.trail .ln{fill:none; stroke:rgba(71,57,201,.22); stroke-width:8; stroke-linecap:round; stroke-linejoin:round; transition:stroke .3s}
+.trail.preview .ln{stroke:rgba(71,57,201,.30); stroke-dasharray:2 14}
+.trail.preview .pt{fill:rgba(71,57,201,.28)}
+.trail .pt{fill:rgba(71,57,201,.34); transition:fill .3s}
+.trail .pt.first{fill:none; stroke:rgba(71,57,201,.45); stroke-width:3}
+.trail.win .ln{stroke:rgba(23,167,91,.42)}
+.trail.win .pt{fill:rgba(23,167,91,.5)}
+.trail.win .pt.first{fill:none; stroke:rgba(23,167,91,.6)}
+
+.layer{position:absolute; inset:2.2%; pointer-events:none; z-index:4}
+.turtle{
+  position:absolute; width:25%; height:25%;
+  transition:left .34s cubic-bezier(.34,.05,.3,1), top .34s cubic-bezier(.34,.05,.3,1);
+}
+.rot{width:100%;height:100%; transition:transform .32s cubic-bezier(.5,-0.15,.35,1.15)}
+.bump{width:100%;height:100%; padding:14%}
+.bump.hitwall{animation:bump .5s ease}
+.bump.hitwallback{animation:bumpback .5s ease}
+@keyframes bump{
+  0%{transform:translateY(0)} 22%{transform:translateY(-26%)}
+  40%{transform:translateY(4%)} 55%{transform:translateY(-6%)} 100%{transform:translateY(0)}
+}
+@keyframes bumpback{
+  0%{transform:translateY(0)} 22%{transform:translateY(26%)}
+  40%{transform:translateY(-4%)} 55%{transform:translateY(6%)} 100%{transform:translateY(0)}
+}
+.bump svg{width:100%;height:100%; filter:drop-shadow(0 4px 6px rgba(23,31,54,.35))}
+
+/* board overlay (success) */
+.ov{
+  position:absolute; inset:0; display:flex; align-items:flex-start; justify-content:center;
+  padding:3.5% 3.5% 0;
+  background:linear-gradient(rgba(231,235,244,.55), rgba(231,235,244,0) 42%);
+  border-radius:var(--r-lg); z-index:6; animation:pop .32s ease;
+}
+.ov[hidden]{display:none}
+@keyframes pop{from{opacity:0; transform:translateY(-10px)} to{opacity:1; transform:none}}
+.ovcard{
+  display:flex; align-items:center; gap:18px; text-align:left;
+  background:var(--surface); border-radius:var(--r-lg); padding:14px 16px 14px 22px;
+  box-shadow:0 20px 46px -16px rgba(23,31,54,.5);
+  border:2.5px solid var(--c-go); max-width:100%;
+}
+.ovcard .txt{min-width:0}
+.ovcard h3{font-size:25px; color:var(--c-go-d); line-height:1.15}
+.ovcard p{margin:2px 0 0; font-size:13px; color:var(--ink-2); font-weight:600; line-height:1.45}
+.ovcard .next{
+  flex:0 0 auto; white-space:nowrap;
+  background:var(--c-go); color:#fff; border-radius:var(--r-md); padding:12px 18px;
+  font-family:"Jua",sans-serif; font-size:18px; box-shadow:0 4px 0 var(--c-go-d);
+  transition:.12s;
+}
+.ovcard .next:active{transform:translateY(3px); box-shadow:0 1px 0 var(--c-go-d)}
+
+/* ================= right panel ================= */
+.panel{
+  display:flex; flex-direction:column; gap:12px; min-height:0;
+  background:var(--surface); border-radius:var(--r-lg); border:1.5px solid var(--line);
+  padding:16px; box-shadow:var(--shadow); overflow-y:auto;
+}
+.ttl{font-size:16px; color:var(--ink-2)}
+.sechead{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:9px}
+.cnt{font-size:12.5px; font-weight:700; color:var(--ink-3); font-variant-numeric:tabular-nums}
+
+.cardgrid{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.card{
+  position:relative;
+  border-radius:var(--r-md); padding:13px 10px 11px;
+  display:flex; flex-direction:column; align-items:center; gap:5px;
+  color:#fff; transition:transform .09s, box-shadow .09s, filter .15s;
+}
+.card svg{width:36px;height:36px}
+.card .nm{font-family:"Jua",sans-serif; font-size:18px; line-height:1}
+.card:active{transform:translateY(4px)}
+.card:disabled{filter:grayscale(.55) opacity(.5); cursor:not-allowed}
+.card.go{background:var(--c-go); box-shadow:0 4px 0 var(--c-go-d)}
+.card.back{background:var(--c-back); box-shadow:0 4px 0 var(--c-back-d)}
+.card.left{background:var(--c-left); color:#4A3400; box-shadow:0 4px 0 var(--c-left-d)}
+.card.right{background:var(--c-right); box-shadow:0 4px 0 var(--c-right-d)}
+.card:active{box-shadow:0 0 0 currentColor}
+.card.go:active{box-shadow:0 1px 0 var(--c-go-d)}
+.card.back:active{box-shadow:0 1px 0 var(--c-back-d)}
+.card.left:active{box-shadow:0 1px 0 var(--c-left-d)}
+.card.right:active{box-shadow:0 1px 0 var(--c-right-d)}
+
+.seqbox{flex:1 1 auto; min-height:130px; display:flex; flex-direction:column}
+.seq{
+  flex:1 1 auto; overflow-y:auto; min-height:110px;
+  background:var(--surface-2); border:1.5px dashed var(--line-2); border-radius:var(--r-md);
+  padding:10px; display:flex; flex-wrap:wrap; gap:7px; align-content:flex-start;
+}
+.seq .empty{
+  margin:auto; font-size:13px; color:var(--ink-3); font-weight:600; text-align:center;
+}
+.chip{
+  position:relative; width:38px; height:44px; border-radius:9px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+  color:#fff; animation:chipin .18s ease;
+}
+@keyframes chipin{from{transform:scale(.6); opacity:0} to{transform:none; opacity:1}}
+.chip svg{width:19px;height:19px}
+.chip .n{font-size:9.5px; font-weight:700; opacity:.85; font-variant-numeric:tabular-nums}
+.chip.go{background:var(--c-go)} .chip.back{background:var(--c-back)}
+.chip.right{background:var(--c-right)} .chip.left{background:var(--c-left); color:#4A3400}
+.chip.last{box-shadow:0 0 0 3px var(--ink)}
+.chip.now{box-shadow:0 0 0 3px var(--accent); transform:scale(1.12); z-index:2}
+.chip.past{opacity:.42}
+
+.ctrls{display:flex; flex-direction:column; gap:8px; flex:0 0 auto}
+.run{
+  background:var(--accent); color:#fff; border-radius:var(--r-md); padding:15px;
+  font-family:"Jua",sans-serif; font-size:22px; box-shadow:0 5px 0 #2E2394; transition:.12s;
+  display:flex; align-items:center; justify-content:center; gap:9px;
+}
+.run:active:not(:disabled){transform:translateY(4px); box-shadow:0 1px 0 #2E2394}
+.run:disabled{background:var(--line-2); color:#fff; box-shadow:0 5px 0 #AAB5CE; cursor:not-allowed}
+.run svg{width:20px;height:20px}
+.delrow{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+.del{
+  border:1.5px solid var(--line-2); background:var(--surface-2); color:var(--ink-2);
+  border-radius:var(--r-sm); padding:11px 6px; font-size:13.5px; font-weight:700; transition:.14s;
+}
+.del:hover:not(:disabled){background:var(--c-back-l); border-color:#F0B4B6; color:var(--c-back-d)}
+.del:disabled{opacity:.42; cursor:not-allowed}
+
+.msg{
+  flex:0 0 auto; border-radius:var(--r-md); padding:12px 14px; font-size:13.5px; font-weight:600;
+  line-height:1.6; border:1.5px solid var(--line); background:var(--surface-2); color:var(--ink-2);
+}
+.msg.fail{background:var(--c-back-l); border-color:#F3BCBE; color:var(--c-back-d)}
+.msg.warn{background:var(--c-left-l); border-color:#EFD08C; color:#7A5400}
+.msg.ok{background:var(--c-go-l); border-color:#A9DFC2; color:var(--c-go-d)}
+.msg b{font-weight:900}
+
+/* ================= modal ================= */
+.modal{
+  position:fixed; inset:0; z-index:50; display:grid; place-items:center;
+  background:rgba(23,31,54,.55); padding:20px; overflow-y:auto;
+}
+.modal[hidden]{display:none}
+.sheet{
+  background:var(--surface); border-radius:var(--r-lg); max-width:660px; width:100%;
+  padding:28px 30px 24px; box-shadow:0 30px 70px -20px rgba(23,31,54,.6);
+  max-height:calc(100vh - 40px); overflow-y:auto;
+}
+.sheet h2{font-size:27px; margin-bottom:4px}
+.sheet .sub{font-size:14px; color:var(--ink-3); font-weight:600; margin:0 0 18px}
+.rules{display:grid; gap:8px; margin-bottom:16px}
+.rule{
+  display:flex; align-items:center; gap:13px;
+  border:1.5px solid var(--line); border-radius:var(--r-md); padding:11px 14px;
+}
+.rule .ico{width:42px;height:42px;border-radius:11px; display:grid; place-items:center; flex:0 0 auto; color:#fff}
+.rule .ico svg{width:24px;height:24px}
+.rule.go .ico{background:var(--c-go)} .rule.back .ico{background:var(--c-back)}
+.rule.right .ico{background:var(--c-right)} .rule.left .ico{background:var(--c-left); color:#4A3400}
+.rule h4{font-family:"Jua",sans-serif; font-weight:400; font-size:17px; margin:0}
+.rule p{margin:2px 0 0; font-size:13px; color:var(--ink-2); font-weight:600}
+.notes{background:var(--surface-2); border-radius:var(--r-md); padding:14px 18px; margin-bottom:16px}
+.notes h4{font-family:"Jua",sans-serif; font-weight:400; font-size:16px; margin:0 0 8px}
+.notes ul{margin:0; padding-left:19px; display:grid; gap:6px}
+.notes li{font-size:13.5px; color:var(--ink-2); font-weight:600; line-height:1.55}
+.notes li b{color:var(--ink); font-weight:900}
+.close{
+  width:100%; background:var(--ink); color:#fff; border-radius:var(--r-md);
+  padding:14px; font-family:"Jua",sans-serif; font-size:19px;
+  position:sticky; bottom:0; box-shadow:0 -10px 18px -6px var(--surface);
+}
+
+/* final screen */
+.finish{text-align:center}
+.medal{
+  width:96px; height:96px; margin:2px auto 12px; border-radius:50%;
+  background:radial-gradient(circle at 50% 35%, #FFF4E2, #FFE0B8);
+  display:grid; place-items:center;
+  box-shadow:0 0 0 8px rgba(255,138,61,.14), 0 10px 26px -12px rgba(255,138,61,.6);
+}
+.medal svg{width:62px;height:62px}
+.finish .big{font-size:34px; margin-bottom:6px; line-height:1.25}
+.finish .sub{margin-bottom:0}
+.finish .sum{
+  display:flex; gap:10px; justify-content:center; margin:18px 0 20px;
+  flex-wrap:wrap;
+}
+.sumbox{background:var(--surface-2); border-radius:var(--r-md); padding:13px 20px; min-width:106px}
+.sumbox b{display:block; font-family:"Jua",sans-serif; font-size:29px; color:var(--accent); font-variant-numeric:tabular-nums}
+.sumbox span{font-size:12.5px; font-weight:700; color:var(--ink-3)}
+.praise{text-align:left; display:grid; gap:11px; margin-bottom:14px}
+.praise p{
+  margin:0; font-size:14.5px; line-height:1.75; font-weight:600; color:var(--ink-2);
+  background:var(--surface-2); border-radius:var(--r-md); padding:14px 18px;
+}
+.praise p b{color:var(--ink); font-weight:900}
+.praise p.hl{
+  background:var(--accent-2); color:var(--ink); font-size:15.5px;
+  border-left:5px solid var(--accent); padding:16px 18px;
+}
+.praise p.hl b{color:var(--accent)}
+.closing{
+  margin:0 0 18px; font-family:"Jua",sans-serif; font-size:17px; color:var(--c-go-d);
+  background:var(--c-go-l); border-radius:var(--r-md); padding:13px 16px;
+}
+
+canvas#fx{position:fixed; inset:0; pointer-events:none; z-index:60}
+
+@media (max-width:1280px){
+  .main{grid-template-columns:minmax(0,1fr) 336px; gap:16px; padding:0 16px 14px}
+  .top{padding:10px 16px}
+  .card{padding:11px 8px 9px}
+  .card svg{width:30px;height:30px}
+  .card .nm{font-size:16px}
+  .run{padding:13px; font-size:20px}
+  .brand h1{font-size:20px}
+  .brand p{display:none}
+  .mnum{width:24px;height:24px;border-radius:8px;font-size:12px}
+  .mnum svg{width:13px;height:13px}
+  .grp{gap:4px; padding:4px 8px 4px 10px}
+  .glabel{font-size:13px}
+  .stages{gap:6px}
+  .panel{padding:13px; gap:10px}
+}
+@media (max-width:900px){
+  body{overflow:auto}
+  .app{height:auto; min-height:100vh}
+  .main{grid-template-columns:1fr; padding:0 16px 20px}
+  .boardwrap{container-type:size; height:min(88vw,560px)}
+  .board{width:min(100cqw,100cqh)}
+  .top{flex-wrap:wrap; padding:14px 16px}
+  .stages{width:100%; margin-left:0; justify-content:flex-start; order:3}
+  .ghost{margin-left:auto}
+  .seq{max-height:none}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.01ms !important; transition-duration:.01ms !important}
+}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <g id="i-go"><path d="M12 4 L12 20 M12 4 L6 10 M12 4 L18 10" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <g id="i-back"><path d="M12 20 L12 4 M12 20 L6 14 M12 20 L18 14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <g id="i-right"><path d="M7 20 L7 12 A5 5 0 0 1 12 7 L17 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 4 L18 7 L14 10" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <g id="i-left"><path d="M17 20 L17 12 A5 5 0 0 0 12 7 L7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 4 L6 7 L10 10" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <g id="i-flag"><path d="M6 3 L6 21" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M7.4 4.2 L18.5 4.2 L15.6 8.6 L18.5 13 L7.4 13 Z" fill="currentColor"/></g>
+  <g id="i-play"><path d="M7 4.6 L19 12 L7 19.4 Z" fill="currentColor"/></g>
+</defs></svg>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 100 100" aria-hidden="true">
+        <rect x="6" y="36" width="10" height="32" rx="5" fill="#151C30"/>
+        <rect x="84" y="36" width="10" height="32" rx="5" fill="#151C30"/>
+        <rect x="14" y="22" width="72" height="64" rx="22" fill="#33456F"/>
+        <path d="M50 32 L65 41 L65 59 L50 68 L35 59 L35 41 Z" fill="#5B78B4"/>
+        <path d="M50 32 L65 41 L65 59 L50 68 L35 59 L35 41 Z" fill="none" stroke="#93A9D8" stroke-width="2.4" stroke-linejoin="round"/>
+        <path d="M50 5 L68 27 L32 27 Z" fill="#FF8A3D"/>
+        <circle cx="42.5" cy="21" r="3" fill="#fff"/><circle cx="57.5" cy="21" r="3" fill="#fff"/>
+      </svg>
+      <div>
+        <h1>거북이 카드 코딩</h1>
+        <p>카드를 순서대로 놓아 거북이를 도착점까지</p>
+      </div>
+    </div>
+    <nav class="stages" id="stages" aria-label="진행 단계"></nav>
+    <button class="ghost" id="helpBtn">게임 방법</button>
+  </header>
+
+  <main class="main">
+    <section class="boardcol">
+      <div class="boardhead">
+        <span class="badge" id="badge">초급 · 미션 1</span>
+        <span class="hint" id="hint">최소 카드 6장</span>
+      </div>
+      <div class="boardwrap">
+        <div class="board" id="board">
+          <div class="cells" id="cells"></div>
+          <svg class="trail" id="trail" viewBox="0 0 400 400" aria-hidden="true"></svg>
+          <div class="layer">
+            <div class="turtle" id="turtle">
+              <div class="rot" id="rot">
+                <div class="bump" id="bump">
+                  <svg viewBox="0 0 100 100" aria-hidden="true">
+                    <rect x="6" y="36" width="10" height="32" rx="5" fill="#151C30"/>
+                    <rect x="84" y="36" width="10" height="32" rx="5" fill="#151C30"/>
+                    <rect x="14" y="22" width="72" height="64" rx="22" fill="#33456F"/>
+                    <path d="M50 32 L65 41 L65 59 L50 68 L35 59 L35 41 Z" fill="#6486C4"/>
+                    <path d="M50 32 L65 41 L65 59 L50 68 L35 59 L35 41 Z" fill="none" stroke="#A8BCE4" stroke-width="3" stroke-linejoin="round"/>
+                    <path d="M50 41 L50 32 M57.5 45 L65 41 M57.5 55 L65 59 M50 59 L50 68 M42.5 55 L35 59 M42.5 45 L35 41" stroke="#A8BCE4" stroke-width="2" opacity=".7"/>
+                    <path d="M50 4 L69 27 L31 27 Z" fill="#FF8A3D"/>
+                    <circle cx="42.5" cy="21" r="3.2" fill="#fff"/><circle cx="57.5" cy="21" r="3.2" fill="#fff"/>
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="ov" id="ov" hidden>
+          <div class="ovcard">
+            <div class="txt">
+              <h3 id="ovTitle">미션 성공!</h3>
+              <p id="ovText"></p>
+            </div>
+            <button class="next" id="ovNext">다음 미션 →</button>
+          </div>
+        </div>
+      </div>
+      <div class="legend">
+        <span><i class="lgchip" style="background:#8D99B7">출</i>출발점</span>
+        <span><i class="lgchip" style="background:var(--goal)"><svg viewBox="0 0 24 24" style="width:11px;height:11px"><use href="#i-flag"/></svg></i>도착점</span>
+        <span><i class="lgchip" style="background:var(--wp)">1</i>경유지 — 번호 순서대로 지나가기</span>
+        <span><i class="lgchip" style="background:var(--nose)"><svg viewBox="0 0 24 24" style="width:11px;height:11px"><path d="M12 5 L19 18 L5 18 Z" fill="currentColor"/></svg></i>거북이가 보는 방향</span>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <div>
+        <div class="sechead"><h2 class="ttl">카드 누르기</h2><span class="cnt">눌러서 순서 만들기</span></div>
+        <div class="cardgrid" id="cardgrid"></div>
+      </div>
+
+      <div class="seqbox">
+        <div class="sechead"><h2 class="ttl">내 카드 순서</h2><span class="cnt" id="seqCount">0장</span></div>
+        <div class="seq" id="seq"></div>
+      </div>
+
+      <div class="ctrls">
+        <button class="run" id="runBtn"><svg viewBox="0 0 24 24"><use href="#i-play"/></svg>실행하기</button>
+        <div class="delrow">
+          <button class="del" id="undoBtn">최근 카드 삭제</button>
+          <button class="del" id="clearBtn">전체 삭제</button>
+        </div>
+      </div>
+
+      <div class="msg" id="msg">카드를 눌러 순서를 만들고 <b>실행하기</b>를 눌러 보세요.</div>
+    </aside>
+  </main>
+</div>
+
+<div class="modal" id="modal" hidden>
+  <div class="sheet" id="sheet"></div>
+</div>
+<canvas id="fx"></canvas>
+
+<script>
+(function(){
+"use strict";
+
+/* ============ 상수 ============ */
+var N = 4;
+var DIRS = [[-1,0],[0,1],[1,0],[0,-1]];              // 0:북 1:동 2:남 3:서
+var CARDS = {
+  G:{cls:'go',    nm:'앞으로',  ic:'#i-go',    key:'↑ / 1'},
+  Y:{cls:'left',  nm:'왼쪽',    ic:'#i-left',  key:'← / 3'},
+  B:{cls:'right', nm:'오른쪽',  ic:'#i-right', key:'→ / 4'},
+  R:{cls:'back',  nm:'뒤로',    ic:'#i-back',  key:'↓ / 2'}
+};
+var ORDER = ['G','R','Y','B'];
+var STAGES = [
+  {label:'초급', n:5, wp:0, lo:3,  hi:7,  bottomUp:true},
+  {label:'중급', n:3, wp:1, lo:6,  hi:10},
+  {label:'중급', n:3, wp:2, lo:9,  hi:13},
+  {label:'고급', n:3, wp:3, lo:12, hi:17}
+];
+var TOTAL = STAGES.reduce(function(a,s){return a+s.n;},0);
+
+var inb = function(r,c){return r>=0&&r<N&&c>=0&&c<N;};
+var sid = function(r,c,d){return (r*N+c)*4+d;};
+var kk  = function(r,c){return r*N+c;};
+
+/* ============ 미션 생성 ============ */
+function outerRing(){
+  var o=[],r,c;
+  for(r=0;r<N;r++) for(c=0;c<N;c++)
+    if(r===0||c===0||r===N-1||c===N-1) o.push([r,c]);
+  return o;
+}
+function inwardDirs(r,c){
+  var d=[];
+  if(r===0)d.push(2); if(r===N-1)d.push(0);
+  if(c===0)d.push(1); if(c===N-1)d.push(3);
+  return d;
+}
+function relax(dist){
+  var seen=new Uint8Array(64), i, u, bv, best;
+  for(;;){
+    best=-1; bv=Infinity;
+    for(i=0;i<64;i++) if(!seen[i]&&dist[i]<bv){bv=dist[i];best=i;}
+    if(best<0||!isFinite(bv)) break;
+    u=best; seen[u]=1;
+    var d=u%4, cell=(u-d)/4, r=Math.floor(cell/N), c=cell%N;
+    var nb=[sid(r,c,(d+1)%4), sid(r,c,(d+3)%4)];
+    var fr=r+DIRS[d][0], fc=c+DIRS[d][1];
+    if(inb(fr,fc)) nb.push(sid(fr,fc,d));
+    var br=r-DIRS[d][0], bc=c-DIRS[d][1];
+    if(inb(br,bc)) nb.push(sid(br,bc,d));
+    for(i=0;i<nb.length;i++) if(dist[u]+1<dist[nb[i]]) dist[nb[i]]=dist[u]+1;
+  }
+  return dist;
+}
+function minCards(start, wps, goal){
+  var dist=new Float64Array(64).fill(Infinity);
+  dist[sid(start.r,start.c,start.d)]=0;
+  var cps=wps.concat([goal]), i, d;
+  for(i=0;i<cps.length;i++){
+    dist=relax(dist);
+    var nd=new Float64Array(64).fill(Infinity);
+    for(d=0;d<4;d++) nd[sid(cps[i].r,cps[i].c,d)]=dist[sid(cps[i].r,cps[i].c,d)];
+    dist=nd;
+  }
+  var best=Infinity;
+  for(d=0;d<4;d++) best=Math.min(best,dist[sid(goal.r,goal.c,d)]);
+  return best;
+}
+var pick=function(a){return a[Math.floor(Math.random()*a.length)];};
+var man =function(a,b){return Math.abs(a.r-b.r)+Math.abs(a.c-b.c);};
+
+function sigOf(m){ return kk(m.start.r,m.start.c)+'>'+kk(m.goal.r,m.goal.c); }
+
+function makeMission(wpCount, lo, hi, bottomUp, seen){
+  var ring=outerRing(), all=[], r, c, fb=null, fb2=null, t;
+  for(r=0;r<N;r++) for(c=0;c<N;c++) all.push([r,c]);
+  for(t=0;t<3000;t++){
+    var start, goal;
+    if(bottomUp){
+      // 초급: 화면 아래에서 출발해 위쪽 도착 — 거북이가 보는 방향이 학생 시선과 같다
+      start={r:N-1, c:Math.floor(Math.random()*N), d:0};
+      goal ={r:0,   c:Math.floor(Math.random()*N)};
+    } else {
+      var s0=pick(ring); start={r:s0[0], c:s0[1], d:pick(inwardDirs(s0[0],s0[1]))};
+      var g0=pick(ring); goal ={r:g0[0], c:g0[1]};
+      if(man(start,goal)<3) continue;
+    }
+    var s=[start.r,start.c], g=[goal.r,goal.c];
+    var used={}; used[kk(s[0],s[1])]=1; used[kk(g[0],g[1])]=1;
+    var wps=[], i, ok=true;
+    for(i=0;i<wpCount;i++){
+      var cand=all.filter(function(p){return !used[kk(p[0],p[1])];});
+      if(!cand.length){ok=false;break;}
+      var w=pick(cand); used[kk(w[0],w[1])]=1; wps.push({r:w[0],c:w[1]});
+    }
+    if(!ok) continue;
+    var cost=minCards(start,wps,goal);
+    if(!isFinite(cost)) continue;
+    var m={start:start, waypoints:wps, goal:goal, min:cost};
+    var fresh = !(seen && seen[sigOf(m)]);
+    if(fresh) fb=m;                       // 난이도는 안 맞아도 최소한 새 지도
+    if(!fb2) fb2=m;
+    if(fresh && cost>=lo && cost<=hi) return m;
+  }
+  return fb || fb2;
+}
+function buildAll(){
+  var list=[], seen={}, si, i;
+  for(si=0;si<STAGES.length;si++){
+    var st=STAGES[si], group=[];
+    for(i=0;i<st.n;i++){
+      var m=makeMission(st.wp, st.lo, st.hi, st.bottomUp, seen);
+      seen[sigOf(m)]=1;                                // 14판 전체에서 출발·도착 조합이 겹치지 않게
+      group.push(m);
+    }
+    group.sort(function(a,b){return a.min-b.min;});    // 같은 단계 안에서도 쉬운 것부터
+    for(i=0;i<group.length;i++){
+      group[i].stage=si; group[i].idxInStage=i;
+      list.push(group[i]);
+    }
+  }
+  return list;
+}
+
+/* ============ 상태 ============ */
+var missions, cur, prog, running, cleared, usedTotal, attempts;
+var $=function(id){return document.getElementById(id);};
+
+function init(){
+  missions=buildAll(); cur=0; cleared=0; usedTotal=0; attempts=0;
+  loadMission();
+  renderStages();
+}
+
+/* ============ 판 그리기 ============ */
+function loadMission(){
+  prog=[]; running=false;
+  var m=missions[cur];
+  var cells=$('cells'); cells.innerHTML='';
+  for(var r=0;r<N;r++) for(var c=0;c<N;c++){
+    var cell=document.createElement('div');
+    cell.className='cell';
+    cell.style.left=(c*25)+'%'; cell.style.top=(r*25)+'%';
+    var tile=document.createElement('div');
+    tile.className='tile';
+    if(m.start.r===r&&m.start.c===c){
+      tile.className+=' start';
+      tile.innerHTML='<span class="startflag">출발</span>';
+    } else if(m.goal.r===r&&m.goal.c===c){
+      tile.className+=' goal';
+      tile.innerHTML='<span class="mark"><span class="ic"><svg viewBox="0 0 24 24" style="width:100%;height:100%;color:var(--goal)"><use href="#i-flag"/></svg></span><span class="tx">도착</span></span>';
+    } else {
+      for(var w=0;w<m.waypoints.length;w++){
+        if(m.waypoints[w].r===r&&m.waypoints[w].c===c){
+          tile.className+=' wp'; tile.dataset.wp=String(w);
+          tile.innerHTML='<span class="mark"><span class="wpnum">'+(w+1)+'</span><span class="tx">경유</span></span>';
+        }
+      }
+    }
+    cell.appendChild(tile); cells.appendChild(cell);
+  }
+  $('badge').textContent=STAGES[m.stage].label+' · 미션 '+(cur+1)+' / '+TOTAL;
+  var wtx = m.waypoints.length ? '<i>경유지 '+m.waypoints.length+'곳</i>' : '';
+  $('hint').innerHTML='최소 카드 <b>'+m.min+'</b>장'+wtx;
+  refreshPreview();
+  renderSeq();
+  setMsg('info', m.waypoints.length
+    ? '경유지를 <b>번호 순서대로</b> 지난 뒤 도착점에 닿으면 성공!'
+    : '카드를 눌러 순서를 만들고 <b>실행하기</b>를 눌러 보세요.');
+  $('ov').hidden=true;
+  renderStages();
+}
+
+function resetTurtle(){
+  var m=missions[cur];
+  place(m.start.r,m.start.c);
+  $('rot').style.transition='none';
+  $('rot').style.transform='rotate('+(m.start.d*90)+'deg)';
+  void $('rot').offsetWidth;
+  $('rot').style.transition='';
+  document.querySelectorAll('.tile.wp').forEach(function(t){t.classList.remove('hit');});
+}
+function place(r,c){
+  var t=$('turtle');
+  t.style.left=(c*25)+'%'; t.style.top=(r*25)+'%';
+}
+function drawTrail(pts, win, preview){
+  var sv=$('trail');
+  sv.classList.toggle('win', !!win);
+  sv.classList.toggle('preview', !!preview);
+  if(pts.length<1){ sv.innerHTML=''; return; }
+
+  // 지나간 칸을 한 번씩만 표시한다.
+  // (뒤로 카드나 경유지 왕복으로 같은 칸을 여러 번 밟아도 겹쳐 그리지 않음)
+  var seenCell={}, order=[], i, p, key;
+  for(i=0;i<pts.length;i++){
+    p=pts[i]; key=p.r*N+p.c;
+    if(!seenCell[key]){ seenCell[key]=1; order.push(p); }
+  }
+
+  // 이웃한 칸 사이만 연결선을 그린다. 같은 구간은 한 번만.
+  var seenEdge={}, segs='';
+  for(i=1;i<pts.length;i++){
+    var a=pts[i-1], b=pts[i];
+    var ka=a.r*N+a.c, kb=b.r*N+b.c;
+    var ek=(ka<kb?ka+'-'+kb:kb+'-'+ka);
+    if(seenEdge[ek]) continue;
+    seenEdge[ek]=1;
+    segs+='M'+(a.c*100+50)+' '+(a.r*100+50)+'L'+(b.c*100+50)+' '+(b.r*100+50);
+  }
+
+  var marks=order.map(function(q,idx){
+    return '<circle class="pt'+(idx===0?' first':'')+'" cx="'+(q.c*100+50)+
+           '" cy="'+(q.r*100+50)+'" r="'+(idx===0?7:9)+'"/>';
+  }).join('');
+
+  sv.innerHTML=(segs?'<path class="ln" d="'+segs+'"/>':'')+marks;
+}
+
+/* ============ 카드 패널 ============ */
+function renderCards(){
+  var g=$('cardgrid'); g.innerHTML='';
+  ORDER.forEach(function(k){
+    var c=CARDS[k];
+    var b=document.createElement('button');
+    b.className='card '+c.cls;
+    b.dataset.card=k;
+    b.setAttribute('aria-label',c.nm+' 카드 추가');
+    b.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><use href="'+c.ic+'"/></svg>'+
+      '<span class="nm">'+c.nm+'</span>';
+    b.addEventListener('click',function(){addCard(k);});
+    g.appendChild(b);
+  });
+}
+function renderSeq(nowIdx){
+  var s=$('seq');
+  if(!prog.length){
+    s.innerHTML='<p class="empty">아직 카드가 없어요.<br>위의 카드를 눌러 보세요.</p>';
+  } else {
+    s.innerHTML=prog.map(function(k,i){
+      var c=CARDS[k], cls='chip '+c.cls;
+      if(nowIdx===undefined && i===prog.length-1) cls+=' last';
+      if(nowIdx!==undefined){
+        if(i===nowIdx) cls+=' now';
+        else if(i<nowIdx) cls+=' past';
+      }
+      return '<span class="'+cls+'" title="'+c.nm+'"><svg viewBox="0 0 24 24"><use href="'+c.ic+'"/></svg><span class="n">'+(i+1)+'</span></span>';
+    }).join('');
+    if(nowIdx!==undefined){
+      var el=s.children[nowIdx];
+      if(el&&el.scrollIntoView) el.scrollIntoView({block:'nearest'});
+    } else { s.scrollTop=s.scrollHeight; }
+  }
+  $('seqCount').textContent=prog.length+'장';
+  updateControls();
+}
+function updateControls(){
+  $('runBtn').disabled = running || prog.length===0;
+  $('undoBtn').disabled = running || prog.length===0;
+  $('clearBtn').disabled = running || prog.length===0;
+  document.querySelectorAll('.card').forEach(function(b){b.disabled=running;});
+}
+// 지금까지 놓은 카드대로 갔을 때의 경로를 미리 계산한다(실행 전 미리보기).
+function previewPath(){
+  var m=missions[cur];
+  var r=m.start.r, c=m.start.c, d=m.start.d;
+  var pts=[{r:r,c:c}];
+  for(var i=0;i<prog.length;i++){
+    var k=prog[i];
+    if(k==='B'){ d=(d+1)%4; continue; }
+    if(k==='Y'){ d=(d+3)%4; continue; }
+    var sgn=(k==='G')?1:-1;
+    var nr=r+sgn*DIRS[d][0], nc=c+sgn*DIRS[d][1];
+    if(!inb(nr,nc)) break;              // 판 밖으로 나가는 지점에서 미리보기 중단
+    r=nr; c=nc; pts.push({r:r,c:c});
+  }
+  return pts;
+}
+function refreshPreview(){
+  resetTurtle();
+  drawTrail(previewPath(), false, true);
+}
+
+function addCard(k){
+  if(running) return;
+  if(prog.length>=40){ setMsg('warn','카드는 최대 40장까지 놓을 수 있어요.'); return; }
+  prog.push(k);
+  refreshPreview();
+  renderSeq();
+}
+function undo(){
+  if(running||!prog.length) return;
+  prog.pop();
+  refreshPreview();
+  renderSeq();
+  setMsg('info','최근에 놓은 카드를 하나 뺐어요.');
+}
+function clearAll(){
+  if(running||!prog.length) return;
+  prog=[];
+  refreshPreview();
+  renderSeq();
+  setMsg('info','카드를 모두 지웠어요. 처음부터 다시 놓아 보세요.');
+}
+function setMsg(tone, html){
+  var m=$('msg');
+  m.className='msg'+(tone==='info'?'':' '+tone);
+  m.innerHTML=html;
+}
+
+/* ============ 실행 ============ */
+var wait=function(ms){return new Promise(function(res){setTimeout(res,ms);});};
+var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+var T_TURN = reduced?60:360, T_MOVE = reduced?60:380, T_GAP = reduced?20:90;
+
+async function run(){
+  if(running||!prog.length) return;
+  running=true; attempts++; updateControls();
+  setMsg('info','거북이가 카드를 하나씩 읽고 있어요…');
+
+  var m=missions[cur];
+  var r=m.start.r, c=m.start.c, d=m.start.d, rot=d*90, wpIdx=0;
+  var pts=[{r:r,c:c}];
+  resetTurtle(); drawTrail(pts);
+  await wait(200);
+
+  for(var i=0;i<prog.length;i++){
+    renderSeq(i);
+    var k=prog[i];
+
+    if(k==='B'||k==='Y'){
+      rot += (k==='B'?90:-90);
+      d = (k==='B') ? (d+1)%4 : (d+3)%4;
+      $('rot').style.transform='rotate('+rot+'deg)';
+      await wait(T_TURN+T_GAP);
+      continue;
+    }
+
+    // 앞으로(G) / 뒤로(R)
+    var sgn = (k==='G') ? 1 : -1;
+    var nr=r+sgn*DIRS[d][0], nc=c+sgn*DIRS[d][1];
+    if(!inb(nr,nc)){
+      var bcls = (sgn>0) ? 'hitwall' : 'hitwallback';
+      $('bump').classList.add(bcls);
+      await wait(520);
+      $('bump').classList.remove(bcls);
+      return finish(false,0,'<b>판 밖으로 나가려고 했어요!</b> '+(i+1)+'번째 <b>'+CARDS[k].nm+'</b> 카드에서 벽에 부딪혔어요. 그 앞에서 방향을 바꿔 볼까요?');
+    }
+    r=nr; c=nc; pts.push({r:r,c:c});
+    place(r,c); drawTrail(pts);
+    if(wpIdx<m.waypoints.length && m.waypoints[wpIdx].r===r && m.waypoints[wpIdx].c===c){
+      var t=document.querySelector('.tile.wp[data-wp="'+wpIdx+'"]');
+      if(t) t.classList.add('hit');
+      wpIdx++;
+    }
+    // 도착점에 닿으면 방향에 상관없이 성공
+    if(wpIdx>=m.waypoints.length && r===m.goal.r && c===m.goal.c){
+      await wait(T_MOVE+120);
+      return finish(true, i+1);
+    }
+    await wait(T_MOVE+T_GAP);
+  }
+
+  if(wpIdx<m.waypoints.length)
+    return finish(false,0,'경유지 <b>'+(wpIdx+1)+'번</b>을 아직 지나지 않았어요. 지나갈 길을 다시 그려 볼까요?');
+  return finish(false,0,'카드를 다 썼는데 아직 도착점에 닿지 못했어요. 카드를 더 놓아 볼까요?');
+}
+
+function finish(ok, used, text, tone){
+  running=false;
+  renderSeq();
+  if(ok){
+    cleared++; usedTotal+=used;
+    $('trail').classList.add('win');
+    var m=missions[cur];
+    var leftover = prog.length-used;
+    var note = (used<=m.min)
+      ? '최소 카드 수로 딱 맞게 도착했어요. 정말 정확해요!'
+      : '카드 '+used+'장으로 도착했어요. (최소 '+m.min+'장)';
+    if(leftover>0) note += ' 뒤에 남은 '+leftover+'장은 쓰지 않았어요.';
+    $('ovTitle').textContent='미션 성공!';
+    $('ovText').innerHTML=note;
+    $('ovNext').textContent = (cur+1>=TOTAL) ? '결과 보기 →' : '다음 미션 →';
+    $('ov').hidden=false;
+    setMsg('ok','<b>미션 '+(cur+1)+' 성공!</b> '+note);
+    renderStages(true);
+    confetti();
+  } else {
+    setMsg(tone||'fail', text);
+  }
+  updateControls();
+}
+
+/* ============ 단계 표시 ============ */
+var CHECK='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5 L10 17.5 L19 7" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+function renderStages(justCleared){
+  var nav=$('stages'); nav.innerHTML='';
+  var base=0;
+  STAGES.forEach(function(st,si){
+    var grp=document.createElement('div');
+    var isCur = missions && missions[cur] && missions[cur].stage===si;
+    var doneCount = Math.min(st.n, Math.max(0, cleared-base));
+    grp.className='grp'+(isCur?' on':'')+(doneCount===st.n?' done':'');
+    var sub = st.wp ? '경유 '+st.wp : '기본';
+    var html='<span class="glabel">'+st.label+'<small>'+sub+'</small></span>';
+    for(var i=0;i<st.n;i++){
+      var n=base+i;
+      var done = n < cleared;
+      var now  = (n===cur) && !done;
+      var just = justCleared && n===cleared-1;
+      html+='<span class="mnum'+(done?' done':'')+(now?' cur':'')+(just?' just':'')+
+            '" title="미션 '+(n+1)+(done?' 성공':'')+'">'+(done?CHECK:(n+1))+'</span>';
+    }
+    grp.innerHTML=html;
+    nav.appendChild(grp);
+    base+=st.n;
+  });
+}
+
+/* ============ 다음 미션 / 최종 ============ */
+function nextMission(){
+  $('ov').hidden=true;
+  if(cur+1>=TOTAL){ showFinish(); return; }
+  cur++; loadMission();
+}
+
+/* ============ 안내 모달 ============ */
+function ruleRow(k, desc){
+  var c=CARDS[k];
+  return '<div class="rule '+c.cls+'"><span class="ico"><svg viewBox="0 0 24 24"><use href="'+c.ic+'"/></svg></span>'+
+         '<div><h4>'+c.nm+'</h4><p>'+desc+'</p></div></div>';
+}
+function showHelp(){
+  $('sheet').innerHTML =
+    '<h2>게임 방법</h2>'+
+    '<p class="sub">실제 터틀봇 카드 코딩과 규칙이 똑같아요.</p>'+
+    '<div class="rules">'+
+      ruleRow('G','거북이가 <b>바라보는 방향</b>으로 한 칸 앞으로 갑니다.')+
+      ruleRow('R','<b>방향은 그대로 두고</b> 한 칸 뒤로 물러납니다.')+
+      ruleRow('Y','제자리에서 왼쪽으로 90도 돕니다. (칸은 그대로)')+
+      ruleRow('B','제자리에서 오른쪽으로 90도 돕니다. (칸은 그대로)')+
+    '</div>'+
+    '<div class="notes"><h4>꼭 기억해요</h4><ul>'+
+      '<li>거북이 앞쪽의 <b>주황색 삼각형</b>이 바라보는 방향이에요.</li>'+
+      '<li><b>판 밖으로 나가면 실패</b>예요. 앞으로·뒤로 카드를 놓기 전에 방향을 확인하세요.</li>'+
+      '<li>경유지가 있으면 <b>1번 → 2번 → 3번 순서대로</b> 지나가야 해요.</li>'+
+      '<li><b>도착점 칸에 닿기만 하면 성공!</b> 어느 방향을 보고 있어도 괜찮아요.</li>'+
+      '<li>시간 제한은 없어요. 실패해도 <b>몇 번이든 다시</b> 해 보세요.</li>'+
+    '</ul></div>'+
+    '<div class="notes" style="background:var(--accent-2)"><h4>단계 안내</h4><ul>'+
+      '<li><b>초급 5판</b> — 출발점과 도착점만 있어요.</li>'+
+      '<li><b>중급 6판</b> — 경유지 1곳(3판) → 경유지 2곳(3판)</li>'+
+      '<li><b>고급 3판</b> — 경유지 3곳, 길이 복잡해져요.</li>'+
+      '<li>모두 통과하면 <b>실제 격자판</b>에서 카드로 직접 해 봅니다.</li>'+
+    '</ul></div>'+
+    '<p style="font-size:12.5px;color:var(--ink-3);font-weight:600;margin:0 0 16px;text-align:center">'+
+      '선생님용 단축키 — 방향키 ↑↓←→ 로 카드 놓기, Enter 실행, Backspace 되돌리기</p>'+
+    '<button class="close" id="closeBtn">좋아요, 시작할게요!</button>';
+  $('modal').hidden=false;
+  $('closeBtn').addEventListener('click', closeModal);
+}
+function showFinish(){
+  $('sheet').innerHTML =
+    '<div class="finish">'+
+      '<div class="medal"><svg viewBox="0 0 100 100" aria-hidden="true">'+
+        '<rect x="6" y="36" width="10" height="32" rx="5" fill="#151C30"/>'+
+        '<rect x="84" y="36" width="10" height="32" rx="5" fill="#151C30"/>'+
+        '<rect x="14" y="22" width="72" height="64" rx="22" fill="#33456F"/>'+
+        '<path d="M50 32 L65 41 L65 59 L50 68 L35 59 L35 41 Z" fill="#6486C4"/>'+
+        '<path d="M50 32 L65 41 L65 59 L50 68 L35 59 L35 41 Z" fill="none" stroke="#A8BCE4" stroke-width="3" stroke-linejoin="round"/>'+
+        '<path d="M50 4 L69 27 L31 27 Z" fill="#FF8A3D"/>'+
+        '<circle cx="42.5" cy="21" r="3.2" fill="#fff"/><circle cx="57.5" cy="21" r="3.2" fill="#fff"/>'+
+        '<circle cx="76" cy="74" r="17" fill="#17A75B"/>'+
+        '<path d="M68 74.5 L74 80.5 L85 68.5" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>'+
+      '</svg></div>'+
+      '<h2 class="big">카드 코딩, 끝까지 해냈어요!</h2>'+
+      '<p class="sub">14개의 미션을 하나도 빠짐없이 성공했어요.</p>'+
+      '<div class="sum">'+
+        '<div class="sumbox"><b>'+TOTAL+'</b><span>성공한 미션</span></div>'+
+        '<div class="sumbox"><b>'+usedTotal+'</b><span>놓아 본 카드</span></div>'+
+        '<div class="sumbox"><b>'+attempts+'</b><span>실행해 본 횟수</span></div>'+
+      '</div>'+
+      '<div class="praise">'+
+        '<p>방금 한 것이 바로 <b>코딩</b>이에요. 순서를 정하고, 실행해 보고, 어디가 틀렸는지 찾아 고치는 것 — '+
+          '프로그래머가 매일 하는 일과 똑같습니다. 여러분은 오늘 그걸 '+attempts+'번이나 해냈어요.</p>'+
+        '<p>한 번에 안 된 미션도 있었죠? 그때 <b>포기하지 않고 다시 카드를 놓아 본 그 순간</b>이 '+
+          '가장 값진 시간이었어요. 틀린 건 실패가 아니라, 답을 찾아가는 과정이니까요.</p>'+
+        '<p class="hl">코딩을 배운다고 모두 프로그래머가 되는 건 아니에요. '+
+          '하지만 <b>어려운 일을 작은 순서로 쪼개고, 하나씩 차근차근 해결하는 힘</b>은 '+
+          '어떤 일을 하든 평생 여러분을 도와줍니다.</p>'+
+      '</div>'+
+      '<p class="closing">정말 잘했어요. 이제 진짜 거북이를 만나러 가 볼까요?</p>'+
+      '<button class="close" id="againBtn">새 미션으로 다시 도전하기</button>'+
+    '</div>';
+  $('modal').hidden=false;
+  $('againBtn').addEventListener('click', function(){ closeModal(); init(); });
+  confetti(true);
+}
+function closeModal(){ $('modal').hidden=true; }
+
+/* ============ 축하 효과 ============ */
+var fx=$('fx'), ctx=fx.getContext('2d'), parts=[], raf=null;
+function sizeFx(){ fx.width=innerWidth*devicePixelRatio; fx.height=innerHeight*devicePixelRatio; ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0); }
+sizeFx(); addEventListener('resize', sizeFx);
+function confetti(big){
+  if(reduced) return;
+  var ox, oy, n = big?200:90;
+  if(big){ ox=innerWidth/2; oy=innerHeight*0.42; }
+  else { var rect=$('board').getBoundingClientRect(); ox=rect.left+rect.width/2; oy=rect.top+rect.height/2; }
+  var cols=['#17A75B','#2277DE','#F2B10E','#E23D42','#7A2FD1','#FF8A3D'];
+  for(var i=0;i<n;i++){
+    var a=Math.random()*Math.PI*2, sp=3+Math.random()*(big?12:8);
+    parts.push({x:ox,y:oy,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-4,
+      w:5+Math.random()*6,h:4+Math.random()*7,
+      c:cols[i%cols.length],rot:Math.random()*6.28,vr:(Math.random()-.5)*.4,life:1});
+  }
+  if(!raf) raf=requestAnimationFrame(tick);
+}
+function tick(){
+  ctx.clearRect(0,0,innerWidth,innerHeight);
+  for(var i=parts.length-1;i>=0;i--){
+    var p=parts[i];
+    p.vy+=0.28; p.x+=p.vx; p.y+=p.vy; p.vx*=0.995; p.rot+=p.vr; p.life-=0.008;
+    if(p.life<=0||p.y>innerHeight+40){ parts.splice(i,1); continue; }
+    ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot);
+    ctx.globalAlpha=Math.max(0,Math.min(1,p.life*1.6));
+    ctx.fillStyle=p.c; ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h); ctx.restore();
+  }
+  if(parts.length) raf=requestAnimationFrame(tick);
+  else { raf=null; ctx.clearRect(0,0,innerWidth,innerHeight); }
+}
+
+/* ============ 이벤트 ============ */
+$('runBtn').addEventListener('click', run);
+$('undoBtn').addEventListener('click', undo);
+$('clearBtn').addEventListener('click', clearAll);
+$('helpBtn').addEventListener('click', showHelp);
+$('ovNext').addEventListener('click', nextMission);
+$('modal').addEventListener('click', function(e){ if(e.target===$('modal')) closeModal(); });
+
+document.addEventListener('keydown', function(e){
+  if(!$('modal').hidden){ if(e.key==='Escape') closeModal(); return; }
+  if(!$('ov').hidden){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); nextMission(); } return; }
+  var map={'ArrowUp':'G','1':'G','ArrowDown':'R','2':'R','ArrowLeft':'Y','3':'Y','ArrowRight':'B','4':'B'};
+  if(map[e.key]){ e.preventDefault(); addCard(map[e.key]); return; }
+  if(e.key==='Enter'){ e.preventDefault(); run(); }
+  if(e.key==='Backspace'){ e.preventDefault(); undo(); }
+});
+
+renderCards();
+init();
+showHelp();
+})();
+</script>
+
+</body>
+</html>
