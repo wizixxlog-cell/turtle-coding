@@ -614,6 +614,40 @@ var man =function(a,b){return Math.abs(a.r-b.r)+Math.abs(a.c-b.c);};
 
 function sigOf(m){ return kk(m.start.r,m.start.c)+'>'+kk(m.goal.r,m.goal.c); }
 
+var CORNERS = {0:1, 3:1, 12:1, 15:1};          // (0,0) (0,3) (3,0) (3,3)
+var MAX_BACK = 1;                               // 최적해에 허용하는 '뒤로' 카드 최대 개수
+
+// 최적 해답을 실제로 구해 '뒤로' 카드가 몇 장 필요한지 센다.
+function backCardsNeeded(m){
+  var W=m.waypoints.length, TT=64*(W+1);
+  var enc=function(s,w){return s*(W+1)+w;};
+  var dist=new Int32Array(TT).fill(-1), par=new Int32Array(TT).fill(-1), pc=new Array(TT).fill(null);
+  var s0=enc(sid(m.start.r,m.start.c,m.start.d),0); dist[s0]=0;
+  var q=[s0], h=0, gs=-1;
+  while(h<q.length){
+    var cur=q[h++], w=cur%(W+1), st=(cur-w)/(W+1);
+    var d=st%4, cell=(st-d)/4, r=Math.floor(cell/N), c=cell%N;
+    if(w===W && r===m.goal.r && c===m.goal.c){ gs=cur; break; }
+    var mv=[['B',sid(r,c,(d+1)%4),w], ['Y',sid(r,c,(d+3)%4),w]];
+    var step=function(nr,nc,cd){
+      if(!inb(nr,nc)) return;
+      var nw=w;
+      if(w<W && m.waypoints[w].r===nr && m.waypoints[w].c===nc) nw=w+1;
+      mv.push([cd, sid(nr,nc,d), nw]);
+    };
+    step(r+DIRS[d][0], c+DIRS[d][1], 'G');
+    step(r-DIRS[d][0], c-DIRS[d][1], 'R');
+    for(var j=0;j<mv.length;j++){
+      var nx=enc(mv[j][1], mv[j][2]);
+      if(dist[nx]===-1){ dist[nx]=dist[cur]+1; par[nx]=cur; pc[nx]=mv[j][0]; q.push(nx); }
+    }
+  }
+  if(gs<0) return Infinity;
+  var back=0, cur2=gs;
+  while(par[cur2]!==-1){ if(pc[cur2]==='R') back++; cur2=par[cur2]; }
+  return back;
+}
+
 function makeMission(wpCount, lo, hi, bottomUp, seen){
   var ring=outerRing(), all=[], r, c, fb=null, fb2=null, t;
   for(r=0;r<N;r++) for(c=0;c<N;c++) all.push([r,c]);
@@ -632,7 +666,14 @@ function makeMission(wpCount, lo, hi, bottomUp, seen){
     var used={}; used[kk(s[0],s[1])]=1; used[kk(g[0],g[1])]=1;
     var wps=[], i, ok=true;
     for(i=0;i<wpCount;i++){
-      var cand=all.filter(function(p){return !used[kk(p[0],p[1])];});
+      var cand=all.filter(function(p){
+        if(used[kk(p[0],p[1])]) return false;
+        if(CORNERS[kk(p[0],p[1])]) return false;              // A. 경유지는 모서리에 두지 않는다
+        for(var j=0;j<wps.length;j++){                        // C. 경유지끼리 붙어 있지 않게
+          if(Math.abs(wps[j].r-p[0])+Math.abs(wps[j].c-p[1]) < 2) return false;
+        }
+        return true;
+      });
       if(!cand.length){ok=false;break;}
       var w=pick(cand); used[kk(w[0],w[1])]=1; wps.push({r:w[0],c:w[1]});
     }
@@ -641,9 +682,15 @@ function makeMission(wpCount, lo, hi, bottomUp, seen){
     if(!isFinite(cost)) continue;
     var m={start:start, waypoints:wps, goal:goal, min:cost};
     var fresh = !(seen && seen[sigOf(m)]);
-    if(fresh) fb=m;                       // 난이도는 안 맞아도 최소한 새 지도
     if(!fb2) fb2=m;
-    if(fresh && cost>=lo && cost<=hi) return m;
+    // 값싼 조건(중복·난이도)을 먼저 거르고, 통과한 후보만 무거운 검사를 돌린다.
+    if(!fresh) continue;
+    var fits = (cost>=lo && cost<=hi);
+    if(!fits && fb) continue;             // 이미 대안이 있으면 굳이 검사하지 않는다
+    // B. 되짚어 가야만 풀리는 문제는 아이들에게 너무 어렵다 → 버린다
+    if(wps.length && backCardsNeeded(m) > MAX_BACK) continue;
+    fb=m;                                 // 난이도는 안 맞아도 최소한 새 지도
+    if(fits) return m;
   }
   return fb || fb2;
 }
